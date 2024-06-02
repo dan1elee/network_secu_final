@@ -110,7 +110,7 @@ int recvData(unsigned char *data, int len, int clnt_sock){
 AES_KEY gen_aes_key(char seed[])
 {
     for(int i=0;i<128;++i){
-        printf("0x%02x ", seed[i]);
+        printf("0x%02x ", (unsigned char)seed[i]);
     }
     printf("\n");
     // // AES密钥生成
@@ -307,7 +307,7 @@ void recv_seed_RSA(unsigned char *seed, int clnt_sock) {
     printf("length of public key: %d\n", public_key_len);
     // print public key information for comparison
     printf("public key: \n");
-    for (int i = 0;i < public_key_len;i++) { printf("0x%02x ", public_key[i]); }
+    for (int i = 0;i < public_key_len;i++) { printf("0x%02x ", (unsigned char)public_key[i]); }
     printf("\n\n");
 
     // send public key information and key length to receiver.
@@ -396,7 +396,7 @@ void client_DH(unsigned char *seed, int sock) {
 
     printf("The shared secret (seed) is: ");
     for (int i = 0; i < secret_size; i++) {
-        printf("0x%02x ", seed[i]);
+        printf("0x%02x ", (unsigned char)seed[i]);
     }
     printf("\n");
 

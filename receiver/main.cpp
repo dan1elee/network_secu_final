@@ -31,7 +31,7 @@ int main(int argc, const char* argv[])
     else
         server_DH(seed, sock);
     printf("The seed is: ");
-    for (int i = 0;i < 128;i++) { printf("0x%02x ", seed[i]); } puts("");
+    for (int i = 0;i < 128;i++) { printf("0x%02x ", (unsigned char)seed[i]); } puts("");
 
     unsigned char data_after_encrypt[16];
     unsigned char data_after_decrypt[16];

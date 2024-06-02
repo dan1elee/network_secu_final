@@ -108,7 +108,7 @@ int genSeed(unsigned char* ranstr){
 AES_KEY gen_aes_key(char seed[]){
     // // AES密钥生成
     for(int i=0;i<128;++i){
-        printf("0x%02x ", seed[i]);
+        printf("0x%02x ", (unsigned char)seed[i]);
     }
     printf("\n");
     unsigned char aesSeed[32];
@@ -304,7 +304,7 @@ void send_seed_RSA(unsigned char *seed, int sock) {
     recvPKeyAndLen(public_key, &public_key_len, sock);
 
     // print public key information for comparison
-    for (int i = 0;i < ntohl(public_key_len);i++) { printf("0x%02x ", public_key[i]); }
+    for (int i = 0;i < ntohl(public_key_len);i++) { printf("0x%02x ", (unsigned char)public_key[i]); }
     printf("\npublic ket len from server:%d\n\n", ntohl(public_key_len));
 
     // switch RSA key's data structure for decrypting.
@@ -327,12 +327,12 @@ void send_seed_RSA(unsigned char *seed, int sock) {
     } else {
         printf("The seed is");
         for (int i = 0;i < 128;i++) {
-            printf(" 0x%02x", seed[i]);
+            printf(" 0x%02x", (unsigned char)seed[i]);
         }
         printf("\n\n");
         printf("The seed after encryption is: ");
         for (int i = 0;i < 128;i++) {
-            printf(" 0x%02x", seed_after_encrypt[i]);
+            printf(" 0x%02x", (unsigned char)seed_after_encrypt[i]);
         }
         printf("\n\n");
     }

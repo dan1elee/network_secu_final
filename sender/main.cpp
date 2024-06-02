@@ -19,7 +19,7 @@ int main(int argc, const char* argv[]) {
     else
         client_DH(seed, clnt_sock);
     printf("The seed is: ");
-    for (int i = 0;i < 128;i++) { printf("0x%02x ", seed[i]); } puts("");
+    for (int i = 0;i < 128;i++) { printf("0x%02x ", (unsigned char)seed[i]); } puts("");
 
     unsigned char fname[4097];
     unsigned char data_to_encrypt[8];
