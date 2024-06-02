@@ -3,24 +3,25 @@ import subprocess
 import threading
 from time import sleep
 
-def run_snd_program(algo, sha, name):
-    result_snd = subprocess.run(['./sender/send',algo,sha,name], capture_output=True, text=True)
+def run_snd_program(seed, algo, sha, name):
+    result_snd = subprocess.run(['./sender/send',seed, algo, sha, name], capture_output=True, text=True)
     return result_snd.stdout, result_snd.stderr
 
-def run_rcv_program(algo,sha):
-    result_rec = subprocess.run(['./receiver/rec',algo,sha], capture_output=True, text=True)
+def run_rcv_program(seed, algo,sha):
+    result_rec = subprocess.run(['./receiver/rec', seed, algo, sha], capture_output=True, text=True)
     return result_rec.stdout, result_rec.stderr
 
 def thread1():
-    global snd_out, snd_err,filename,algo,sha_value
-    snd_out, snd_err = run_snd_program(algo,sha_value,filename)
+    global snd_out, snd_err, filename, algo, sha_value, seed
+    snd_out, snd_err = run_snd_program(seed, algo, sha_value, filename)
 
 def thread2():
-    global rcv_out, rcv_err,algo,sha_value
-    rcv_out, rcv_err = run_rcv_program(algo,sha_value)
+    global rcv_out, rcv_err, algo, sha_value, seed
+    rcv_out, rcv_err = run_rcv_program(seed, algo, sha_value)
 
 
 if __name__ == '__main__':
+    seed_choice = ['RSA', 'DH']
     encrypt_choice = ['AES','DES']
     st.set_page_config(
         page_title="文件传输",
@@ -36,6 +37,7 @@ if __name__ == '__main__':
             f.write(uploaded_file.getbuffer())
         
         st.success('文件上传完成')
+        seed = st.selectbox('选择密钥交换算法', seed_choice)
         algo = st.selectbox('选择加密算法',encrypt_choice)
         sha = st.checkbox('开启SHA-256完整性检验')
         sha_value = "1" if sha else "0"

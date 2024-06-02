@@ -1,25 +1,25 @@
 #include "sender.h"
 
-int main(int argc, const char* argv[]){
-    const char* enc_type  = argv[1];
-    const char* sha_en = argv[2];
-    const char* filepath = argv[3];
-    bool sha = (strcmp(sha_en,"1") == 0);
+int main(int argc, const char* argv[]) {
+    const char* ex_method = argv[1];    // RSA or not
+    const char* enc_type  = argv[2];    // AES or not
+    const char* sha_en = argv[3];       // 1 or not
+    const char* filepath = argv[4];     // file path
+    bool sha = (strcmp(sha_en, "1") == 0);
     int serv_sock = getServerSocket("127.0.0.1", 8000);
     printf("Sender socket ready.\n");
     printf("Waiting for connection...\n");
-    int clnt_sock=waitForConnection(serv_sock);
+    int clnt_sock = waitForConnection(serv_sock);
     printf("Connection built.\n");
 
     // receive seed.
     unsigned char seed[128];
-    unsigned char *s_b=seed;
-    recvSeed(s_b,128,clnt_sock);
-    printf("The seed is %s\n", seed);
-
-    // 生成密钥
-     
-    //  
+    if (strcmp(ex_method, "RSA") == 0)
+        recv_seed_RSA(seed, clnt_sock);
+    else
+        client_DH(seed, clnt_sock);
+    printf("The seed is: ");
+    for (int i = 0;i < 128;i++) { printf("0x%02x ", seed[i]); } puts("");
 
     unsigned char fname[4097];
     unsigned char data_to_encrypt[8];

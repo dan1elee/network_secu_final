@@ -1,19 +1,36 @@
 #include "receiver.h"
 #define SHA_BUFFER_SIZE 32
-int sendSeed(unsigned char *seed,int s_len,int sock){
-    char* data=(char*)seed;
-    int len=s_len;
-    int rc;
-     do{
-        rc=write(sock, data, len);
-        if(rc<0){
-            printf("errno while sending seed is %d\n",errno);
+
+int sendData(unsigned char *data, int len, int sock){
+    int r;
+    do {
+        r = write(sock, data, len);
+        if(r < 0) {
+            printf("errno while sending seed is %d\n", errno);
             exit(0);
-        }else{
-            data+=rc;
-            len-=rc;
+        } else {
+            data += r;
+            len  -= r;
         }
-    }while(len>0);
+    } while(len > 0);
+    
+    return len;
+}
+
+int recvData(unsigned char *data, int len, int clnt_sock){
+    int r;
+
+    do {
+        r = read(clnt_sock, data, len);
+        if(r < 0) {
+            printf("errno while receive seed is %d\n", errno);
+            exit(0);
+        } else {
+            data += r;
+            len  -= r;
+        }
+    } while(len > 0);
+    
     return len;
 }
 
@@ -276,4 +293,151 @@ int fileSHA256(FILE* fp, unsigned long fsize, unsigned char* hash){
     }
     printf("\n");
     return 0;
+}
+
+void send_seed_RSA(unsigned char *seed, int sock) {
+    unsigned char public_key[1024];
+    int public_key_len;
+    recvPKeyAndLen(public_key, &public_key_len, sock);
+
+    // print public key information for comparison
+    for (int i = 0;i < ntohl(public_key_len);i++) { printf("0x%02x ", public_key[i]); }
+    printf("\npublic ket len from server:%d\n\n", ntohl(public_key_len));
+
+    // switch RSA key's data structure for decrypting.
+    unsigned char *public_key_ptr = public_key;
+    RSA *rsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&public_key_ptr, ntohl(public_key_len));
+    if(rsa == NULL){
+        printf("switch rsa data structure failed!\n");
+    }
+    // RSA_print_fp(stdout, rsa, 0);
+
+    //encrypt process
+    unsigned char seed_after_encrypt[128];
+    memset(seed, 0, 128);
+    genSeed(seed);
+    
+    if(RSA_public_encrypt(128, (const unsigned char*)seed, seed_after_encrypt, rsa, RSA_NO_PADDING) == -1) {
+        printf("encrypt failed!\n");
+        char szErrMsg[1024] = {0};
+        printf("error for encrypt is %s\n", ERR_error_string(ERR_get_error(), szErrMsg));
+    } else {
+        printf("The seed is");
+        for (int i = 0;i < 128;i++) {
+            printf(" 0x%02x", seed[i]);
+        }
+        printf("\n\n");
+        printf("The seed after encryption is: ");
+        for (int i = 0;i < 128;i++) {
+            printf(" 0x%02x", seed_after_encrypt[i]);
+        }
+        printf("\n\n");
+    }
+
+    //send encrypted seed
+    sendData(seed_after_encrypt, 128, sock);
+}
+
+
+void server_DH(unsigned char *seed, int sock) {
+    DH *dh = DH_new();
+    int codes;
+    int net_len;
+
+    // Generate DH parameters (server side)
+    if (1 != DH_generate_parameters_ex(dh, 1024, DH_GENERATOR_2, NULL)) {
+        printf("DH parameter generation failed\n");
+        return;
+    }
+
+    if (1 != DH_check(dh, &codes) || codes != 0) {
+        printf("DH parameter check failed\n");
+        return;
+    }
+
+    // Send DH parameters to the client
+    const BIGNUM *p = DH_get0_p(dh);
+    const BIGNUM *g = DH_get0_g(dh);
+
+    int p_len = BN_num_bytes(p);
+    int g_len = BN_num_bytes(g);
+    
+    unsigned char *p_bin = (unsigned char *)malloc(p_len);
+    unsigned char *g_bin = (unsigned char *)malloc(g_len);
+
+    BN_bn2bin(p, p_bin);
+    BN_bn2bin(g, g_bin);
+
+    // Send the length of the data first
+    net_len = htonl(p_len); // Convert length to network byte order
+    if (write(sock, &net_len, sizeof(net_len)) != sizeof(net_len)) {
+        perror("Failed to send data length");
+        exit(EXIT_FAILURE);
+    }
+    sendData(p_bin, p_len, sock);
+    // Send the length of the data first
+    net_len = htonl(g_len); // Convert length to network byte order
+    if (write(sock, &net_len, sizeof(net_len)) != sizeof(net_len)) {
+        perror("Failed to send data length");
+        exit(EXIT_FAILURE);
+    }
+    sendData(g_bin, g_len, sock);
+
+    free(p_bin);
+    free(g_bin);
+
+    // Generate DH key pair (server side)
+    if (1 != DH_generate_key(dh)) {
+        printf("DH key generation failed\n");
+        return;
+    }
+
+    const BIGNUM *pub_key = DH_get0_pub_key(dh);
+
+    // Send public key to the client
+    int pub_key_len = BN_num_bytes(pub_key);
+    unsigned char *pub_key_bin = (unsigned char *)malloc(pub_key_len);
+    BN_bn2bin(pub_key, pub_key_bin);
+    // Send the length of the data first
+    net_len = htonl(pub_key_len); // Convert length to network byte order
+    if (write(sock, &net_len, sizeof(net_len)) != sizeof(net_len)) {
+        perror("Failed to send data length");
+        exit(EXIT_FAILURE);
+    }
+    sendData(pub_key_bin, pub_key_len, sock);
+
+    // Receive the client's public key
+    unsigned char client_pub_key_bin[1024];
+    int client_pub_key_len;
+    // Receive the length of the data first
+    if (read(sock, &net_len, sizeof(net_len)) != sizeof(net_len)) {
+        perror("Failed to receive data length");
+        exit(EXIT_FAILURE);
+    }
+    client_pub_key_len = ntohl(net_len); // Convert length from network byte order to host byte order
+    recvData(client_pub_key_bin, client_pub_key_len, sock);
+
+    BIGNUM *client_pub_key = BN_bin2bn(client_pub_key_bin, client_pub_key_len, NULL);
+
+    // Compute the shared secret
+    unsigned char shared_secret[1024];
+    int secret_size = DH_compute_key(shared_secret, client_pub_key, dh);
+    if (secret_size < 0) {
+        printf("Failed to compute shared secret\n");
+        return;
+    }
+
+    // Derive the seed from the shared secret
+    memcpy(seed, shared_secret, secret_size);
+    seed[secret_size] = 0;
+
+    printf("The shared secret (seed) is: ");
+    for (int i = 0; i < secret_size; i++) {
+        printf("%02x", seed[i]);
+    }
+    printf("\n");
+
+    free(pub_key_bin);
+    DH_free(dh);
+    BN_free(client_pub_key);
 }

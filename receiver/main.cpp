@@ -1,10 +1,10 @@
 #include "receiver.h"
 
-
 int main(int argc, const char* argv[])
 {
-    const char* enc_type  = argv[1];
-    const char* sha_en = argv[2];
+    const char* ex_method = argv[1];    // RSA or not
+    const char* enc_type  = argv[2];    // AES or not
+    const char* sha_en = argv[3];       // 1 or not
     bool sha = (strcmp(sha_en,"1") == 0);
     //get socket
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -22,19 +22,16 @@ int main(int argc, const char* argv[])
         printf("connection built!\n");
     }
 
-    // send  seed(由RSA和DH产生),用于生成AES和DES密钥
-    //RSA 先生成随机数，加密后传输给发送方
-    //DH不产生随机数，直接传输超大整数后在本地生成seed(密钥)
-    unsigned char seed[SEED_LEN];
-    unsigned char ranstr[SEED_LEN];
-    memset(ranstr,0,128);
-    genSeed(ranstr);
-    strcpy((char*)seed,(const char*)ranstr);
-    sendSeed(seed,SEED_LEN,sock);
-
-
-    //生成密钥
-    // 
+    // send seed(由 RSA 和 DH 产生), 用于生成AES和DES密钥
+    // RSA 先生成随机数，加密后传输给发送方
+    // DH 不产生随机数，直接传输超大整数后在本地生成seed(密钥)
+    unsigned char seed[128];
+    if (strcmp(ex_method, "RSA") == 0)
+        send_seed_RSA(seed, sock);
+    else
+        server_DH(seed, sock);
+    printf("The seed is: ");
+    for (int i = 0;i < 128;i++) { printf("0x%02x ", seed[i]); } puts("");
 
     unsigned char data_after_encrypt[16];
     unsigned char data_after_decrypt[16];

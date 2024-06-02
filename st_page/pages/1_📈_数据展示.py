@@ -8,6 +8,7 @@ st.set_page_config(
     layout="wide")
 aes_data = pd.read_csv('./st_page/data/AES_data.csv')
 des_data = pd.read_csv('./st_page/data/DES_data.csv')
+rsa_data = pd.read_csv('./st_page/data/RSA_data.csv')
 
 key_traces = []
 encrypt_traces = []
@@ -100,11 +101,26 @@ total_fig = go.Figure(data=total_traces, layout={
 st.write(f'- 总时间')
 st.plotly_chart(total_fig, use_container_width=True)
 
+rsa_enc_trace = go.Scatter(
+    x=rsa_data['key_length'],
+    y=rsa_data['encrypt_time'],
+    mode="lines+markers",
+    name=f"RSA算法加密时间"
+)
 
+rsa_dec_trace = go.Scatter(
+    x=rsa_data['key_length'],
+    y=rsa_data['decrypt_time'],
+    mode="lines+markers",
+    name=f"RSA算法解密时间"
+)
 
-# cab_egress_trace = go.Scatter(
-#     x=result.index,
-#     y=result['egress_bytes'] / (1024 ** 2),
-#     mode="lines"
-#     # name=net_cabinet_host_list[i]
-# )
+rsa_crypt_fig = go.Figure(data=[rsa_enc_trace, rsa_dec_trace], layout={
+    "xaxis_title": "密钥长度(bit)",
+    "yaxis_title": "时间(us)",
+})
+rsa_crypt_fig.update_layout(
+    yaxis=dict(type='log')
+)
+st.write(f'- RSA算法')
+st.plotly_chart(rsa_crypt_fig, use_container_width=True)
