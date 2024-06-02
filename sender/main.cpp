@@ -5,7 +5,9 @@ int main(int argc, const char* argv[]) {
     const char* enc_type  = argv[2];    // AES or not
     const char* sha_en = argv[3];       // 1 or not
     const char* filepath = argv[4];     // file path
+    const char* randerror = argv[5];
     bool sha = (strcmp(sha_en, "1") == 0);
+    bool rande = (strcmp(randerror, "1") == 0);
     int serv_sock = getServerSocket("127.0.0.1", 8000);
     printf("Sender socket ready.\n");
     printf("Waiting for connection...\n");
@@ -39,10 +41,10 @@ int main(int argc, const char* argv[]) {
     memset(data_to_encrypt,0,sizeof(data_to_encrypt));
     if (strcmp(enc_type, "AES") == 0){
         AES_KEY AESEncryptKey = gen_aes_key((char *)seed);
-        sendAESFile(fp,fsize,(unsigned char*)filepath,data_to_encrypt,data_after_encrypt,&AESEncryptKey,clnt_sock, sha);
+        sendAESFile(fp,fsize,(unsigned char*)filepath,data_to_encrypt,data_after_encrypt,&AESEncryptKey,clnt_sock, sha, rande);
     } else {
         DES_key_schedule key_schedule = gen_des_key((char *)seed);
-        sendDESFile(fp, fsize, (unsigned char*)filepath, data_to_encrypt, data_after_encrypt, &key_schedule, clnt_sock, sha);
+        sendDESFile(fp, fsize, (unsigned char*)filepath, data_to_encrypt, data_after_encrypt, &key_schedule, clnt_sock, sha, rande);
     }
     fclose(fp);
     close(serv_sock);

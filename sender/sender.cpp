@@ -138,7 +138,7 @@ DES_key_schedule gen_des_key(char seed[])
     return key_schedule;
 }
 
-int sendAESFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *data_to_encrypt,unsigned char *data_after_encrypt,AES_KEY *AESEncryptKey,int clnt_sock, bool sha_enable){
+int sendAESFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *data_to_encrypt,unsigned char *data_after_encrypt,AES_KEY *AESEncryptKey,int clnt_sock, bool sha_enable, bool random_error){
     //send file size
     unsigned long times=((unsigned long)(fsize/16))+1;
     printf("File size:%lu bytes\n",fsize);
@@ -167,14 +167,27 @@ int sendAESFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *
     //send data
     printf("Sending File...\n");
     double en_time = 0.0;
+    srand((unsigned)time(NULL));
+    bool change_flag = false;
     for (unsigned long i = 0; i < times; i++)
     {
         fread(data_to_encrypt,16,1,fp);
         double time3 = getTime();
         AES_encrypt(data_to_encrypt, data_after_encrypt, AESEncryptKey);
         double time4 = getTime();
+        if(random_error){
+            double r = rand() / double(RAND_MAX);
+            if (r < 0.01) {
+                change_flag = true;
+                int bit = (int)(128 * rand() / double(RAND_MAX));
+                data_after_encrypt[bit>>3] = data_after_encrypt[bit>>3] ^ (1<<(bit % 8));
+            }
+        }
         sendData(data_after_encrypt,16,clnt_sock);
         en_time += time4 - time3;
+    }
+    if(change_flag){
+        printf("!!! bits changed in this file.\n");
     }
     printf("%lu bytes加密时间: %.2f ms\n", fsize, en_time);
     if(sha_enable){
@@ -195,7 +208,7 @@ int sendAESFile(FILE* fp,unsigned long fsize,unsigned char *path,unsigned char *
     return 0;
 }
 
-int sendDESFile(FILE *fp, unsigned long fsize, unsigned char *path, unsigned char *data_to_encrypt, unsigned char *data_after_encrypt, DES_key_schedule *des_key_schedule, int clnt_sock, bool sha_enable)
+int sendDESFile(FILE *fp, unsigned long fsize, unsigned char *path, unsigned char *data_to_encrypt, unsigned char *data_after_encrypt, DES_key_schedule *des_key_schedule, int clnt_sock, bool sha_enable,bool random_error)
 {
     // send file size
     unsigned long times = ((unsigned long)(fsize / 8)) + 1;
@@ -228,14 +241,27 @@ int sendDESFile(FILE *fp, unsigned long fsize, unsigned char *path, unsigned cha
     // send data
     printf("Sending File...\n");
     double en_time = 0.0;
+    srand((unsigned)time(NULL));
+    bool change_flag = false;
     for (unsigned long i = 0; i < times; i++)
     {
         fread(data_to_encrypt, 8, 1, fp);
         double time3 = getTime();
         DES_ecb_encrypt((DES_cblock *)data_to_encrypt, (DES_cblock *)data_after_encrypt,des_key_schedule, DES_ENCRYPT);
         double time4 = getTime();
+        if(random_error){
+            double r = rand() / double(RAND_MAX);
+            if (r < 0.01) {
+                change_flag = true;
+                int bit = (int)(64 * rand() / double(RAND_MAX));
+                data_after_encrypt[bit>>3] = data_after_encrypt[bit>>3] ^ (1<<(bit % 8));
+            }
+        }
         sendData(data_after_encrypt, 8, clnt_sock);
         en_time += time4 - time3;
+    }
+    if(change_flag){
+        printf("!!! bits changed in this file.\n");
     }
     printf("%lu bytes加密时间: %.2f ms\n", fsize, en_time);
     if (sha_enable){
