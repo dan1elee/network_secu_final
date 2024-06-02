@@ -109,7 +109,10 @@ int recvData(unsigned char *data, int len, int clnt_sock){
 
 AES_KEY gen_aes_key(char seed[])
 {
-    printf("%s", seed);
+    for(int i=0;i<128;++i){
+        printf("0x%02x ", seed[i]);
+    }
+    printf("\n");
     // // AES密钥生成
     unsigned char aesSeed[32];
     strncpy((char *)aesSeed, (const char *)seed, 32);
@@ -393,7 +396,7 @@ void client_DH(unsigned char *seed, int sock) {
 
     printf("The shared secret (seed) is: ");
     for (int i = 0; i < secret_size; i++) {
-        printf("%02x", seed[i]);
+        printf("0x%02x ", seed[i]);
     }
     printf("\n");
 

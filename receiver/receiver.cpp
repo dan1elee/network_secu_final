@@ -107,7 +107,10 @@ int genSeed(unsigned char* ranstr){
 
 AES_KEY gen_aes_key(char seed[]){
     // // AES密钥生成
-    printf("%s", seed);
+    for(int i=0;i<128;++i){
+        printf("0x%02x ", seed[i]);
+    }
+    printf("\n");
     unsigned char aesSeed[32];
     strncpy((char *)aesSeed, (const char *)seed, 32);
     AES_KEY AESDecryptKey;
